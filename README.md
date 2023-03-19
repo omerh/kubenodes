@@ -22,3 +22,5 @@ kubenodes --deployment my-app
 and make sure to label the app with `app: my-app` in kubernetes manifest
 
 you have the option to use `--compact` flag to see a compact list of pods in a single node row.
+
+[!sample](img/sample.jpg)
