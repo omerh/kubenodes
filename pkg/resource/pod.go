@@ -18,3 +18,11 @@ func GetPods(apiClient *kubernetes.Clientset, namespace string, deployment strin
 	allPods.Items = append(allPods.Items, pods.Items...)
 	return allPods
 }
+
+func MakeUniquePodsOnNode(pods v1.PodList) map[string][]string {
+	nodePodMap := make(map[string][]string)
+	for _, p := range pods.Items {
+		nodePodMap[p.Spec.NodeName] = append(nodePodMap[p.Spec.NodeName], p.Name)
+	}
+	return nodePodMap
+}

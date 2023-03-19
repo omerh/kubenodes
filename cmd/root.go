@@ -1,10 +1,14 @@
 package cmd
 
 import (
-	"flag"
 	"fmt"
+	"kubenodes/pkg/client"
+	"kubenodes/pkg/render"
+	"kubenodes/pkg/resource"
 	"os"
+	"time"
 
+	"github.com/rivo/tview"
 	"github.com/spf13/cobra"
 )
 
@@ -12,18 +16,49 @@ var rootCmd = &cobra.Command{
 	Use:   "kubenodes",
 	Short: "Top down view from nodes to pods in a namespace",
 	Run: func(cmd *cobra.Command, args []string) {
-		// if len(args) == 0 {
-		// 	cmd.Help()
-		// 	os.Exit(0)
-		// }
-		// app := view.NewApp(LoadAPIClient())
-		flag.CommandLine.Parse([]string{})
 		namespace, _ := cmd.Flags().GetString("namespace")
 		deployment, _ := cmd.Flags().GetString("deployment")
+		kubeConfigPath, _ := cmd.Flags().GetString("kubeconfig")
+		refresh, _ := cmd.Flags().GetInt("refresh")
+		compact, _ := cmd.Flags().GetBool("compact")
 
-		apiClient := LoadAPIClient()
-		pods := GetPods(apiClient, namespace, deployment)
+		apiClient := client.LoadAPIClient(kubeConfigPath)
 
+		// Retrieve running pods according to the deployment tag of app=
+		pods := resource.GetPods(apiClient, namespace, deployment)
+		podsOnNodesMap := resource.MakeUniquePodsOnNode(pods)
+
+		// Slice with pod and node from GetPods
+		nodesInfo := resource.NodeMapToNodes(podsOnNodesMap)
+		// Update the instance info
+		nodesInfo = resource.UpdateNodeInfoSlice(apiClient, nodesInfo)
+
+		table := render.NodesPodsFullRender(nodesInfo, compact)
+
+		app := tview.NewApplication()
+		flex := tview.NewFlex().SetDirection(tview.FlexRow)
+		flex.AddItem(table, 0, 1, false)
+
+		timer := time.NewTicker(time.Duration(refresh) * time.Second)
+		go func() {
+			for range timer.C {
+				pods := resource.GetPods(apiClient, namespace, deployment)
+				podsOnNodesMap := resource.MakeUniquePodsOnNode(pods)
+				nodesInfo := resource.NodeMapToNodes(podsOnNodesMap)
+				nodesInfo = resource.UpdateNodeInfoSlice(apiClient, nodesInfo)
+
+				table.Clear()
+				table = render.NodesPodsFullRender(nodesInfo, compact)
+
+				app.QueueUpdateDraw(func() {
+					app.SetRoot(table, true)
+				})
+			}
+		}()
+
+		if err := app.SetRoot(table, true).Run(); err != nil {
+			panic(err)
+		}
 	},
 }
 
@@ -36,7 +71,9 @@ func Execute() {
 }
 
 func init() {
+	rootCmd.PersistentFlags().StringP("kubeconfig", "k", "", "kubeconfig path")
 	rootCmd.PersistentFlags().StringP("namespace", "n", "default", "kubernetes namespace")
 	rootCmd.PersistentFlags().StringP("deployment", "d", "", "kubernetes deployment, looks for app=[deployment_name]")
-	rootCmd.PersistentFlags().StringP("pod", "p", "", "kubernetes pods")
+	rootCmd.PersistentFlags().IntP("refresh", "r", 5, "application refresh interval")
+	rootCmd.PersistentFlags().Bool("compact", false, "how to see pod listing in the node view")
 }
