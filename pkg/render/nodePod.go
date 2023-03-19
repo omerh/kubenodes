@@ -59,11 +59,12 @@ func NodesPodsFullRender(nodesInfo []resource.NodeInfo, compact bool) *tview.Tab
 		SetBorders(true).
 		SetBordersColor(tview.Styles.BorderColor)
 
-	headers := []string{"Name", "LifeCycle", "Type", "Arch", "AZ", "Pods"}
+	headers := []string{"Name", "Type", "Size", "Arch", "AZ", "Pods"}
 
 	for i, header := range headers {
 		table.SetCell(0, i, tview.NewTableCell(header).
 			SetTextColor(tview.Styles.PrimaryTextColor).
+			SetAlign(1).
 			SetSelectable(false))
 	}
 	row := 1
@@ -73,15 +74,19 @@ func NodesPodsFullRender(nodesInfo []resource.NodeInfo, compact bool) *tview.Tab
 			SetSelectable(false))
 		table.SetCell(row, 1, tview.NewTableCell(nodeInfo.CapacityType).
 			SetTextColor(tview.Styles.PrimaryTextColor).
+			SetAlign(1).
 			SetSelectable(false))
 		table.SetCell(row, 2, tview.NewTableCell(nodeInfo.InstanceType).
 			SetTextColor(tview.Styles.PrimaryTextColor).
+			SetAlign(1).
 			SetSelectable(false))
 		table.SetCell(row, 3, tview.NewTableCell(nodeInfo.InstanceArch).
 			SetTextColor(tview.Styles.PrimaryTextColor).
+			SetAlign(1).
 			SetSelectable(false))
 		table.SetCell(row, 4, tview.NewTableCell(nodeInfo.InstanceAZ).
 			SetTextColor(tview.Styles.PrimaryTextColor).
+			SetAlign(1).
 			SetSelectable(false))
 
 		if compact {
