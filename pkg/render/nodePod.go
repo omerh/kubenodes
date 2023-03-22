@@ -95,14 +95,16 @@ func NodesPodsFullRender(nodesInfo []resource.NodeInfo, compact bool) *tview.Tab
 				SetSelectable(false))
 			row++
 		} else {
-			for _, p := range nodesInfo[i].Pod {
+			for j, p := range nodesInfo[i].Pod {
 				table.SetCell(row, 5, tview.NewTableCell(p).
 					SetTextColor(tview.Styles.PrimaryTextColor).
 					SetSelectable(false))
 				row++
-			}
-			if len(nodesInfo[i].Pod) <= 1 {
-				row++
+
+				// If this is the last object in the slice, add a new row for next node
+				if len(nodesInfo[i].Pod) == j {
+					row++
+				}
 			}
 		}
 	}
