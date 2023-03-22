@@ -40,25 +40,34 @@ var rootCmd = &cobra.Command{
 		flex.AddItem(table, 0, 1, false)
 
 		timer := time.NewTicker(time.Duration(refresh) * time.Second)
+		done := make(chan interface{})
 		go func() {
-			for range timer.C {
-				pods := resource.GetPods(apiClient, namespace, deployment)
-				podsOnNodesMap := resource.MakeUniquePodsOnNode(pods)
-				nodesInfo := resource.NodeMapToNodes(podsOnNodesMap)
-				nodesInfo = resource.UpdateNodeInfoSlice(apiClient, nodesInfo)
+			defer close(done)
+			// for range timer.C {
+			for {
+				select {
+				case <-timer.C:
+					pods := resource.GetPods(apiClient, namespace, deployment)
+					podsOnNodesMap := resource.MakeUniquePodsOnNode(pods)
+					nodesInfo := resource.NodeMapToNodes(podsOnNodesMap)
+					nodesInfo = resource.UpdateNodeInfoSlice(apiClient, nodesInfo)
 
-				table.Clear()
-				table = render.NodesPodsFullRender(nodesInfo, compact)
+					table.Clear()
+					table = render.NodesPodsFullRender(nodesInfo, compact)
 
-				app.QueueUpdateDraw(func() {
-					app.SetRoot(table, true)
-				})
+					app.QueueUpdateDraw(func() {
+						app.SetRoot(table, true)
+					})
+				case <-done:
+					return
+				}
 			}
 		}()
 
 		if err := app.SetRoot(table, true).Run(); err != nil {
 			panic(err)
 		}
+		timer.Stop()
 	},
 }
 
