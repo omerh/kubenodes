@@ -12,12 +12,13 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var version = "v0.0.1"
+func SetVersion(version string) {
+	rootCmd.Version = version
+}
 
 var rootCmd = &cobra.Command{
-	Use:     "kubenodes",
-	Version: version,
-	Short:   "Top down view from nodes to pods in a namespace",
+	Use:   "kubenodes",
+	Short: "Top down view from nodes to pods in a namespace",
 	Run: func(cmd *cobra.Command, args []string) {
 		namespace, _ := cmd.Flags().GetString("namespace")
 		labelSlice, _ := cmd.Flags().GetStringSlice("label")
