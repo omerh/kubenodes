@@ -12,23 +12,28 @@ import (
 	"github.com/spf13/cobra"
 )
 
+var version = "v0.0.1"
+
 var rootCmd = &cobra.Command{
-	Use:   "kubenodes",
-	Short: "Top down view from nodes to pods in a namespace",
+	Use:     "kubenodes",
+	Version: version,
+	Short:   "Top down view from nodes to pods in a namespace",
 	Run: func(cmd *cobra.Command, args []string) {
 		namespace, _ := cmd.Flags().GetString("namespace")
-		deployment, _ := cmd.Flags().GetString("deployment")
+		labelSlice, _ := cmd.Flags().GetStringSlice("label")
 		kubeConfigPath, _ := cmd.Flags().GetString("kubeconfig")
 		refresh, _ := cmd.Flags().GetInt("refresh")
 		compact, _ := cmd.Flags().GetBool("compact")
 
+		// Kubernetes client
 		apiClient := client.LoadAPIClient(kubeConfigPath)
 
 		// Retrieve running pods according to the deployment tag of app=
-		pods := resource.GetPods(apiClient, namespace, deployment)
+		pods := resource.GetPods(apiClient, namespace, labelSlice)
+		// pods returns v1.PodList, converting to a unique map per node name from pod.spec
 		podsOnNodesMap := resource.MakeUniquePodsOnNode(pods)
 
-		// Slice with pod and node from GetPods
+		// Convert map to nodeSlice with pod and node from GetPods
 		nodesInfo := resource.NodeMapToNodes(podsOnNodesMap)
 		// Update the instance info
 		nodesInfo = resource.UpdateNodeInfoSlice(apiClient, nodesInfo)
@@ -43,11 +48,10 @@ var rootCmd = &cobra.Command{
 		done := make(chan interface{})
 		go func() {
 			defer close(done)
-			// for range timer.C {
 			for {
 				select {
 				case <-timer.C:
-					pods := resource.GetPods(apiClient, namespace, deployment)
+					pods := resource.GetPods(apiClient, namespace, labelSlice)
 					podsOnNodesMap := resource.MakeUniquePodsOnNode(pods)
 					nodesInfo := resource.NodeMapToNodes(podsOnNodesMap)
 					nodesInfo = resource.UpdateNodeInfoSlice(apiClient, nodesInfo)
@@ -82,7 +86,7 @@ func Execute() {
 func init() {
 	rootCmd.PersistentFlags().StringP("kubeconfig", "k", "", "kubeconfig path")
 	rootCmd.PersistentFlags().StringP("namespace", "n", "default", "kubernetes namespace")
-	rootCmd.PersistentFlags().StringP("deployment", "d", "", "kubernetes deployment, looks for app=[deployment_name]")
+	rootCmd.PersistentFlags().StringSliceP("label", "l", []string{}, "app pod label, looks for app=[deployment_name], -l a,b")
 	rootCmd.PersistentFlags().IntP("refresh", "r", 5, "application refresh interval")
 	rootCmd.PersistentFlags().Bool("compact", false, "how to see pod listing in the node view")
 }
